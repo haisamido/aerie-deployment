@@ -14,8 +14,21 @@ installs:
 	brew install kompose
 	brew install kustomize
 
+get-deployment.zip:
+	wget https://github.com/NASA-AMMOS/aerie/releases/download/v2.18.0/Deployment.zip && \
+	unzip ./Deployment.zip && \
+	tar xvf ./deployment.tar
+
 get-docker-compose: clean
 	curl https://raw.githubusercontent.com/NASA-AMMOS/aerie-mission-model-template/main/docker-compose.yml --output docker-compose.yml
+
+# curl https://raw.githubusercontent.com/NASA-AMMOS/aerie-mission-model-template/main/docker-compose.yml --output docker-compose.yml
+
+# kubectl config use-context docker-desktop
+# kubectl create namespace aerie-dev
+# kubectl apply -f .
+# kubectl get pods -n aerie-dev
+# kubectl delete namespace aerie-dev
 
 kompose-convert: installs clean get-docker-compose ## convert docker-compose to kompose
 	mkdir -p kompose-output/ && \
@@ -26,8 +39,12 @@ clean:
 	rm -f ./docker-compose.yml ./kompose-output/*.y*l
 
 references:
-	@echo https://fluxcd.io/flux/components/kustomize/kustomizations/ && \
-	echo https://nasa-ammos.github.io/aerie-docs/introduction/#fast-track 
+	@echo https://nasa-ammos.github.io/aerie-docs/introduction/#fast-track
+	@echo https://nasa-ammos.github.io/aerie-docs/planning/upload-mission-model/ 
+	@echo https://fluxcd.io/flux/components/kustomize/kustomizations/
+	@echo https://nasa-ammos.github.io/aerie-docs/introduction/#fast-track 
+	@echo https://github.com/NASA-AMMOS/aerie/tree/develop/deployment
+	@echo https://github.com/NASA-AMMOS/aerie/releases
 
 print-%:
 	@echo $*=$($*)
