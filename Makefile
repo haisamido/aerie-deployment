@@ -22,7 +22,7 @@ get-deployment.zip:
 get-docker-compose:
 	curl https://raw.githubusercontent.com/NASA-AMMOS/aerie-mission-model-template/main/docker-compose.yml --output docker-compose.yml
 
-aerie-up: get-docker-compose aerie-down ## aerie up
+aerie-up: | get-docker-compose aerie-down ## aerie up
 	docker compose down
 	source .env && docker compose up 
 
