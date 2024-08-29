@@ -19,16 +19,39 @@ get-deployment.zip:
 	unzip ./Deployment.zip && \
 	tar xvf ./deployment.tar
 
-get-docker-compose: clean
+get-docker-compose:
 	curl https://raw.githubusercontent.com/NASA-AMMOS/aerie-mission-model-template/main/docker-compose.yml --output docker-compose.yml
+
+aerie-up: get-docker-compose aerie-down ## aerie up
+	docker compose down
+	source .env && docker compose up 
+
+aerie-down: ## aerie down
+	docker compose down
 
 # curl https://raw.githubusercontent.com/NASA-AMMOS/aerie-mission-model-template/main/docker-compose.yml --output docker-compose.yml
 
+# kubectl delete namespace aerie-dev
 # kubectl config use-context docker-desktop
 # kubectl create namespace aerie-dev
 # kubectl apply -f .
 # kubectl get pods -n aerie-dev
 # kubectl delete namespace aerie-dev
+# kubectl delete --all pods --namespace=default # this actually restarts!
+# kubectl delete -n default deployment nginx-deployment 
+
+# kubectl get nodes
+# kubectl create namespace nginx-deployment
+# kubectl apply -f ./nginx-deployment.yaml
+# kubectl get pods -n nginx-deployment
+# kubectl delete namespace nginx-deployment
+
+postgres-recreate:
+	export POSTGRES_USER=postgres && export POSTGRES_PASSWORD=postgres &&\
+	kubectl delete namespace aerie-dev && \
+	kubectl create namespace aerie-dev && \
+	kubectl apply -f ~/development/github.com/haisamido/postgres-deployment.yaml
+	kubectl get pods -n aerie-dev
 
 kompose-convert: installs clean get-docker-compose ## convert docker-compose to kompose
 	mkdir -p kompose-output/ && \
