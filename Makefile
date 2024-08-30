@@ -93,6 +93,7 @@ clean:
 	rm -f ./docker-compose.yml ./kompose-output/*.y*l
 
 references:
+	@echo https://github.com/txn2/kubefwd/blob/master/README.md
 	@echo https://www.linkedin.com/pulse/running-postgresql-docker-container-kubernetes-persistent-pudi-n2xue/
 	@echo https://nasa-ammos.github.io/aerie-docs/introduction/#fast-track
 	@echo https://nasa-ammos.github.io/aerie-docs/planning/upload-mission-model/ 
