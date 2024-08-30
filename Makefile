@@ -47,6 +47,12 @@ aerie-down: ## aerie down
 # kubectl get pods -n nginx-deployment
 # kubectl delete namespace nginx-deployment
 
+create-namespace-%: ## create k8s namespace
+	kubectl create namespace $*
+
+delete-namespace-%: ## delete k8s namespace
+	kubectl delete namespace $*
+
 postgres-secret:
 	kubectl delete namespace postgresql
 	kubectl create namespace postgresql
@@ -54,14 +60,36 @@ postgres-secret:
 	kubectl get secrets -n postgresql
 
 aerie-postgres-recreate:
-#	export POSTGRES_USER=postgres && export POSTGRES_PASSWORD=postgres
-	kubectl delete namespace aerie-dev || true
-	kubectl create namespace aerie-dev && \
-	kubectl apply -f./workspace/postgres/postgres-data-persistentvolumeclaim.yaml
-	kubectl apply -f./workspace/postgres/postgres-deployment.yaml
-	kubectl apply -f./workspace/postgres/postgres-service.yaml
-#	kubectl expose pod postgres --namespace aerie-dev
-#	kubectl run dnsutils --namespace aerie-dev --image=registry.k8s.io/coredns/coredns:v1.11.1
+	@export namespace=aerie-dev && \
+	make delete-namespace-$${namespace} || true && \
+	make create-namespace-$${namespace} && \
+	kubectl apply -f./workspace/postgres/postgres-data-persistentvolumeclaim.yaml && \
+	kubectl apply -f./workspace/postgres/postgres-deployment.yaml && \
+	kubectl apply -f./workspace/postgres/postgres-service.yaml && \
+	sleep 5 && \
+	sudo kubefwd svc -n $${namespace} -m 5432:5432
+
+nginx-example-1: ## nginx-example-1 (works)
+	@export namespace=$@ && \
+	make delete-namespace-$${namespace} || true && \
+	make create-namespace-$${namespace} && \
+	kubectl apply -f ./workspace/nginx-examples/$${namespace}/$${namespace}.yaml -n $${namespace} && \
+	kubectl get pods -n $${namespace} && \
+	echo && echo open http://nginx && echo && \
+	sudo kubefwd svc -n $${namespace} -m 80:80
+
+nginx-example-2: ## nginx-example-2 (does not work)
+	@echo source: https://medium.com/@muppedaanvesh/deploying-nginx-on-kubernetes-a-quick-guide-04d533414967
+	@export namespace=$@ && \
+	make delete-namespace-$${namespace} || true && \
+	make create-namespace-$${namespace} && \
+	kubectl run nginx-pod --image=nginx:1.14.2 --restart=Never --port=80 -n $${namespace} && \
+	kubectl expose pod nginx-pod --type=NodePort --port=80 --name=$${namespace}
+
+# kubectl get svc
+# sudo kubefwd svc -n $${namespace} -m 80:80
+
+#	sudo kubefwd svc -n nginx-deployment -m 80:80
 
 aerie-kubefwd: installs
 	sudo kubefwd svc -n aerie-dev -m 5432:5432

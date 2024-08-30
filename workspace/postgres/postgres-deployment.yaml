@@ -15,16 +15,16 @@ spec:
     spec:
       containers:
         - name: postgres
-#          image: ghcr.io/nasa-ammos/aerie-postgres:develop
-          image: postgres:latest
+          image: ghcr.io/nasa-ammos/aerie-postgres:develop
+#          image: postgres:latest
           ports:
             - containerPort: 5432
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgres-data
           env:
-            - name: POSTGRES_DB
-              value: postgres
+            # - name: POSTGRES_DB
+            #   value: postgres
             - name: POSTGRES_USER
               value: postgres
             - name: POSTGRES_PASSWORD
