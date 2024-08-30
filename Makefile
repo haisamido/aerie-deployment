@@ -60,10 +60,10 @@ aerie-postgres-recreate:
 	kubectl apply -f./workspace/postgres/postgres-data-persistentvolumeclaim.yaml
 	kubectl apply -f./workspace/postgres/postgres-deployment.yaml
 	kubectl apply -f./workspace/postgres/postgres-service.yaml
-	kubectl expose pod postgres --namespace aerie-dev
-	kubectl run dnsutils --namespace aerie-dev --image=registry.k8s.io/coredns/coredns:v1.11.1
+#	kubectl expose pod postgres --namespace aerie-dev
+#	kubectl run dnsutils --namespace aerie-dev --image=registry.k8s.io/coredns/coredns:v1.11.1
 
-aerie-dev-kubefwd: installs
+aerie-kubefwd: installs
 	sudo kubefwd svc -n aerie-dev -m 5432:5432
 
 # kubectl run dnsutils --image=registry.k8s.io/coredns/coredns:v1.11.1 --rm -ti
