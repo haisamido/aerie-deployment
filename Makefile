@@ -13,6 +13,7 @@ directories:
 installs:
 	brew install kompose
 	brew install kustomize
+	brew install txn2/tap/kubefwd
 
 get-deployment.zip:
 	wget https://github.com/NASA-AMMOS/aerie/releases/download/v2.18.0/Deployment.zip && \
@@ -46,12 +47,42 @@ aerie-down: ## aerie down
 # kubectl get pods -n nginx-deployment
 # kubectl delete namespace nginx-deployment
 
-postgres-recreate:
-	export POSTGRES_USER=postgres && export POSTGRES_PASSWORD=postgres &&\
-	kubectl delete namespace aerie-dev && \
+postgres-secret:
+	kubectl delete namespace postgresql
+	kubectl create namespace postgresql
+	kubectl create secret generic postgresql-secret --namespace postgresql --from-literal=POSTGRES_DB=postgres --from-literal=POSTGRES_USER=postgres --from-literal=POSTGRES_PASSWORD=pass --dry-run=client -o yaml > ./workspace/postgres/postgresql-secret.yml
+	kubectl get secrets -n postgresql
+
+aerie-postgres-recreate:
+#	export POSTGRES_USER=postgres && export POSTGRES_PASSWORD=postgres
+	kubectl delete namespace aerie-dev || true
 	kubectl create namespace aerie-dev && \
-	kubectl apply -f ~/development/github.com/haisamido/postgres-deployment.yaml
-	kubectl get pods -n aerie-dev
+	kubectl apply -f./workspace/postgres/postgres-data-persistentvolumeclaim.yaml
+	kubectl apply -f./workspace/postgres/postgres-deployment.yaml
+	kubectl apply -f./workspace/postgres/postgres-service.yaml
+	kubectl expose pod postgres --namespace aerie-dev
+	kubectl run dnsutils --namespace aerie-dev --image=registry.k8s.io/coredns/coredns:v1.11.1
+
+aerie-dev-kubefwd: installs
+	sudo kubefwd svc -n aerie-dev -m 5432:5432
+
+# kubectl run dnsutils --image=registry.k8s.io/coredns/coredns:v1.11.1 --rm -ti
+# kubectl logs --namespace=kube-system -l k8s-app=kube-dns
+# kubectl get pods --namespace=kube-system -l k8s-app=kube-dns
+# kubectl get svc --namespace=kube-system
+# kubectl get endpoints kube-dns --namespace=kube-system
+# kubectl -n kube-system edit configmap coredns
+
+# --rm -ti
+
+#--image=postgres:latest --rm -ti
+#	kubectl get pods -n aerie-dev
+
+# kubectl create -f configs/postgresql-secret.yml
+# kubectl create -f configs/postgresql-pv.yml
+# kubectl create -f configs/postgresql-pvc.yml
+# kubectl create -f deployment/postgresql-deployment.yml
+# kubectl create -f service/postgresql-svc.yml
 
 kompose-convert: installs clean get-docker-compose ## convert docker-compose to kompose
 	mkdir -p kompose-output/ && \
@@ -62,6 +93,7 @@ clean:
 	rm -f ./docker-compose.yml ./kompose-output/*.y*l
 
 references:
+	@echo https://www.linkedin.com/pulse/running-postgresql-docker-container-kubernetes-persistent-pudi-n2xue/
 	@echo https://nasa-ammos.github.io/aerie-docs/introduction/#fast-track
 	@echo https://nasa-ammos.github.io/aerie-docs/planning/upload-mission-model/ 
 	@echo https://fluxcd.io/flux/components/kustomize/kustomizations/
