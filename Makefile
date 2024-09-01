@@ -13,6 +13,7 @@ directories:
 installs:
 	brew install kompose
 	brew install kustomize
+	brew install krew
 	brew install txn2/tap/kubefwd
 
 get-deployment.zip:
@@ -32,21 +33,21 @@ aerie-down: ## aerie down
 
 # curl https://raw.githubusercontent.com/NASA-AMMOS/aerie-mission-model-template/main/docker-compose.yml --output docker-compose.yml
 
-# kubectl delete namespace aerie-dev
-# kubectl config use-context docker-desktop
-# kubectl create namespace aerie-dev
-# kubectl apply -f .
-# kubectl get pods -n aerie-dev
-# kubectl delete namespace aerie-dev
 # kubectl delete --all pods --namespace=default # this actually restarts!
 # kubectl delete -n default deployment nginx-deployment 
 
-# kubectl get nodes
-# kubectl create namespace nginx-deployment
-# kubectl apply -f ./nginx-deployment.yaml
-# kubectl get pods -n nginx-deployment
-# kubectl delete namespace nginx-deployment
+# kubectl krew install ingress-nginx
+# WARNING: To be able to run kubectl plugins, you need to add
+# the following to your ~/.bash_profile or ~/.bashrc:
 
+#     export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+
+# and restart your shell.
+
+# Updated the local copy of plugin index.
+# Installing plugin: ingress-nginx
+# W0901 15:29:31.903348   53274 install.go:164] failed to install plugin "ingress-nginx": plugin "ingress-nginx" does not offer installation for this platform
+# failed to install some plugins: [ingress-nginx]: plugin "ingress-nginx" does not offer installation for this platform
 
 postgres-secret:
 	kubectl delete namespace postgresql
@@ -100,6 +101,7 @@ postgres-example-1: ## postgres-example-1
 mysql-wordpress-example-1: ## kubectl apply -k ./workspace/examples/mysql-wordpress-example-1/ -n mysql-wordpress-example-1
 	@echo && echo "[INFO] Attempting to create namespace k8s:context:[${K8S_CONTEXT}]:namespace:[$@]" && \
 	make kubectl-use-context K8S_CONTEXT=${K8S_CONTEXT} && \
+	kubectl delete -k ./workspace/examples/$@/ -n $@
 	make kubectl-delete-namespace-$@ || true && \
 	make kubectl-create-namespace-$@ && \
 	kubectl apply -k ./workspace/examples/$@/ -n $@
