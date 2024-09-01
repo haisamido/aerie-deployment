@@ -63,10 +63,10 @@ aerie-postgres-recreate:
 	@export namespace=aerie-dev && \
 	make delete-namespace-$${namespace} || true && \
 	make create-namespace-$${namespace} && \
-	kubectl apply -f./workspace/postgres/postgres-data-persistentvolumeclaim.yaml && \
-	kubectl apply -f./workspace/postgres/postgres-deployment.yaml && \
-	kubectl apply -f./workspace/postgres/postgres-service.yaml && \
-	sleep 5 && \
+	kubectl apply -f./workspace/examples/aerie/postgres-data-persistentvolumeclaim.yaml && \
+	kubectl apply -f./workspace/examples/aerie/postgres-deployment.yaml && \
+	kubectl apply -f./workspace/examples/aerie/postgres-service.yaml && \
+	echo && echo psql -h postgres -U postgres && echo && \
 	sudo kubefwd svc -n $${namespace} -m 5432:5432
 
 nginx-example-1: ## nginx-example-1 (works)
@@ -77,6 +77,14 @@ nginx-example-1: ## nginx-example-1 (works)
 	kubectl get pods -n $${namespace} && \
 	echo && echo open http://nginx && echo && \
 	sudo kubefwd svc -n $${namespace} -m 80:80
+
+postgres-example-1:
+	@export namespace=$@ && \
+	make delete-namespace-$${namespace} || true && \
+	make create-namespace-$${namespace} && \
+	kubectl apply -f ./workspace/examples/$${namespace}/$${namespace}.yaml -n $${namespace} && \
+	kubectl get pods -n $${namespace} && \
+	sudo kubefwd svc -n $${namespace} -m 5432:5432
 
 nginx-example-2: ## nginx-example-2 (does not work)
 	@echo source: https://medium.com/@muppedaanvesh/deploying-nginx-on-kubernetes-a-quick-guide-04d533414967
