@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY:
+.PHONY: mysql-wordpress-example-1
 
 export SHELL=/bin/bash
 export TZ=:UTC
@@ -47,11 +47,6 @@ aerie-down: ## aerie down
 # kubectl get pods -n nginx-deployment
 # kubectl delete namespace nginx-deployment
 
-create-namespace-%: ## create k8s namespace
-	kubectl create namespace $*
-
-delete-namespace-%: ## delete k8s namespace
-	kubectl delete namespace $*
 
 postgres-secret:
 	kubectl delete namespace postgresql
@@ -61,43 +56,132 @@ postgres-secret:
 
 aerie-postgres-recreate:
 	@export namespace=aerie-dev && \
-	make delete-namespace-$${namespace} || true && \
-	make create-namespace-$${namespace} && \
+	make kubectl-delete-namespace-$${namespace} || true && \
+	make kubectl-create-namespace-$${namespace} && \
 	kubectl apply -f./workspace/examples/aerie/postgres-data-persistentvolumeclaim.yaml && \
 	kubectl apply -f./workspace/examples/aerie/postgres-deployment.yaml && \
 	kubectl apply -f./workspace/examples/aerie/postgres-service.yaml && \
 	echo && echo psql -h postgres -U postgres && echo && \
 	sudo kubefwd svc -n $${namespace} -m 5432:5432
 
-nginx-example-1: ## nginx-example-1 (works)
-	@export namespace=$@ && \
-	make delete-namespace-$${namespace} || true && \
-	make create-namespace-$${namespace} && \
-	kubectl apply -f ./workspace/examples/$${namespace}/$${namespace}.yaml -n $${namespace} && \
-	kubectl get pods -n $${namespace} && \
+nginx-example-1: ## nginx-example-1
+	@echo && echo running target $@
+	@make kubectl-delete-namespace-$@ || true && \
+	make kubectl-create-namespace-$@ && \
+	kubectl apply -f ./workspace/examples/$@/$@.yaml -n $@ && \
+	kubectl get pods -n $@ && \
 	echo && echo open http://nginx && echo && \
-	sudo kubefwd svc -n $${namespace} -m 80:80
+	sudo kubefwd svc -n $@ -m 80:80
 
-postgres-example-1:
+postgres-example-1: ## postgres-example-1
+	@echo && echo running target $@
 	@export namespace=$@ && \
-	make delete-namespace-$${namespace} || true && \
-	make create-namespace-$${namespace} && \
-	kubectl apply -f ./workspace/examples/$${namespace}/$${namespace}.yaml -n $${namespace} && \
-	kubectl get pods -n $${namespace} && \
-	sudo kubefwd svc -n $${namespace} -m 5432:5432
+	make kubectl-delete-namespace-$@ || true && \
+	make kubectl-create-namespace-$@ && \
+	kubectl apply -f ./workspace/examples/$@/$@.yaml -n $@ && \
+	kubectl get pods -n $@ && \
+	sudo kubefwd svc -n $@ -m 5432:5432
 
-nginx-example-2: ## nginx-example-2 (does not work)
-	@echo source: https://medium.com/@muppedaanvesh/deploying-nginx-on-kubernetes-a-quick-guide-04d533414967
-	@export namespace=$@ && \
-	make delete-namespace-$${namespace} || true && \
-	make create-namespace-$${namespace} && \
-	kubectl run nginx-pod --image=nginx:1.14.2 --restart=Never --port=80 -n $${namespace} && \
-	kubectl expose pod nginx-pod --type=NodePort --port=80 --name=$${namespace}
+# nginx-example-2: ## nginx-example-2 (does not work)
+# 	@echo source: https://medium.com/@muppedaanvesh/deploying-nginx-on-kubernetes-a-quick-guide-04d533414967
+# 	@export namespace=$@ && \
+# 	make kubectl-delete-namespace-$${namespace} || true && \
+# 	make kubectl-create-namespace-$${namespace} && \
+# 	kubectl run nginx-pod --image=nginx:1.14.2 --restart=Never --port=80 -n $${namespace}
+# 	sudo kubefwd svc -n $${namespace} -m 80:80
+
+# curl --silent -L https://k8s.io/examples/application/wordpress/mysql-deployment.yaml --output ./workspace/examples/$@/mysql-deployment.yaml && \
+# curl --silent -L https://k8s.io/examples/application/wordpress/wordpress-deployment.yaml --output ./workspace/examples/$@/wordpress-deployment.yaml && \
+
+#	mkdir -p ./workspace/examples/mysql-wordpress-persistent-volume/ && \
+
+#	@echo && echo source: https://kubernetes.io/docs/tutorials/stateful-application/mysql-wordpress-persistent-volume/ && echo
+
+mysql-wordpress-example-1: ## kubectl apply -k ./workspace/examples/mysql-wordpress-example-1/ -n mysql-wordpress-example-1
+	@echo && echo "[INFO] Attempting to create namespace k8s:context:[${K8S_CONTEXT}]:namespace:[$@]" && \
+	make kubectl-use-context K8S_CONTEXT=${K8S_CONTEXT} && \
+	make kubectl-delete-namespace-$@ || true && \
+	make kubectl-create-namespace-$@ && \
+	kubectl apply -k ./workspace/examples/$@/ -n $@
+	sudo kubefwd svc -n $@ -m 80:80
+
+mysql-wordpress-example-2:
+	@echo && echo "[INFO] Attempting to create namespace k8s:context:[${K8S_CONTEXT}]:namespace:[$@]" && \
+	make kubectl-use-context K8S_CONTEXT=${K8S_CONTEXT} && \
+	kubectl apply -k ./workspace/examples/mysql-wordpress-example-1/ -n default
+
+# make kubectl-delete-deployment-default K8S_DEPLOYMENT=wordpress
+# make kubectl-delete-deployment-default K8S_DEPLOYMENT=wordpress-mysql
+
+# make kubectl-get-secrets-default && \
+# make kubectl-get-pvc-default && \
+# kubectl get pods
+
+# kubectl apply -k ./workspace/examples/mysql-wordpress-persistent-volume/ && \
+# && \
+#	kubectl expose pod nginx-pod --type=NodePort --port=80 --name=$${namespace}
 
 # kubectl get svc
-# sudo kubefwd svc -n $${namespace} -m 80:80
 
-#	sudo kubefwd svc -n nginx-deployment -m 80:80
+# kubectl targets
+K8S_CONTEXT=docker-desktop
+K8S_CONTEXT_TODELETE=null
+
+kubectl-get-contexts: ## kubectl get contexts
+	@echo && kubectl config get-contexts
+
+kubectl-use-context: ## kubectl use-context K8S_CONTEXT=<default=docker-desktop>
+	@echo && echo "[INFO] Attempting to use-context k8s:context:[${K8S_CONTEXT}]"
+	@kubectl config use-context ${K8S_CONTEXT}
+
+kubectl-delete-context: ## kubectl config delete-context K8S_CONTEXT_TODELETE=<default=null>
+	@echo && echo "[INFO] Attempting to delete context k8s:context:[${K8S_CONTEXT_TODELETE}]"
+	@kubectl config delete-context ${K8S_CONTEXT_TODELETE} || true
+
+kubectl-cluster-info: ## kubectl cluster-info
+	@echo && kubectl cluster-info
+
+kubectl-get-nodes: kubectl-use-context ## kubectl get nodes
+	@echo && kubectl get nodes
+
+kubectl-get-namespaces: kubectl-use-context ## kubectl get namespaces
+	@echo && kubectl get namespaces
+
+kubectl-create-namespace-%: ## kubectl create namespace %
+	@echo && echo "[INFO] Attempting to create namespace k8s:context:[${K8S_CONTEXT}]:namespace:[$*]"
+	kubectl create namespace $*
+
+kubectl-delete-namespace-%: ## kubectl delete namespace %
+	@echo && echo "[INFO] Attempting to delete namespace k8s:context:[${K8S_CONTEXT}]:namespace:[$*]"
+	@kubectl delete namespace $*
+
+K8S_DEPLOYMENT=null
+
+kubectl-get-deployments: ## kubectl get deployment
+	@make kubectl-use-context K8S_CONTEXT=${K8S_CONTEXT} && \
+	kubectl get deployment
+
+kubectl-delete-deployment-%: ## kubectl delete -n $* deployment ${K8S_DEPLOYMENT}
+	kubectl delete -n $* deployment ${K8S_DEPLOYMENT}
+
+kubectl-get-secrets-%: ## kubectl get secrets -n %
+	@echo && kubectl get secrets -n $*
+
+kubectl-get-pvc-%: ## kubectl get pvc --namespace %
+	@echo && kubectl get pvc --namespace $*
+
+kubectl-get-pods-%:
+	kubectl get pods -n $*
+
+K8S_K=./workspace/examples/mysql-wordpress-persistent-volume/
+kubectl-apply-k:
+	kubectl apply -k ${KPATH}
+
+K8S_POD=nginx=pod
+K8S_POD_PORT=80
+kubectl-expose-pod-%: ## kubectl expose pod ${K8S_POD} --type=NodePort --port=${K8S_POD_PORT} --name=$${namespace}
+	@export namespace=$@ && \
+	kubectl expose pod ${K8S_POD} --type=NodePort --port=${K8S_POD_PORT} --name=$${namespace}
 
 aerie-kubefwd: installs
 	sudo kubefwd svc -n aerie-dev -m 5432:5432
