@@ -73,7 +73,7 @@ nginx-example-1: ## nginx-example-1 (works)
 	@export namespace=$@ && \
 	make delete-namespace-$${namespace} || true && \
 	make create-namespace-$${namespace} && \
-	kubectl apply -f ./workspace/nginx-examples/$${namespace}/$${namespace}.yaml -n $${namespace} && \
+	kubectl apply -f ./workspace/examples/$${namespace}/$${namespace}.yaml -n $${namespace} && \
 	kubectl get pods -n $${namespace} && \
 	echo && echo open http://nginx && echo && \
 	sudo kubefwd svc -n $${namespace} -m 80:80
