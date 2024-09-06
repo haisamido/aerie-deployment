@@ -2,7 +2,7 @@
 
 set -e
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
+psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
   \echo 'Initializing aerie user...'
   CREATE USER "$AERIE_USERNAME" WITH PASSWORD '$AERIE_PASSWORD';
   \echo 'Done!'
@@ -38,13 +38,13 @@ EOSQL
 
 export PGPASSWORD="$AERIE_PASSWORD"
 
-psql -v ON_ERROR_STOP=1 --username "$AERIE_USERNAME" --dbname "aerie" <<-EOSQL
+psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" --username "$AERIE_USERNAME" --dbname "aerie" <<-EOSQL
   \set aerie_user $AERIE_USERNAME
   \set gateway_user $GATEWAY_DB_USER
   \set merlin_user $MERLIN_DB_USER
   \set scheduler_user $SCHEDULER_DB_USER
   \set sequencing_user $SEQUENCING_DB_USER
   \echo 'Initializing aerie database objects...'
-  \ir /docker-entrypoint-initdb.d/sql/init.sql
+  \ir $ENTRYPOINT_INITDB/sql/init.sql
   \echo 'Done!'
 EOSQL

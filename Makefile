@@ -13,6 +13,9 @@ installs:
 	brew install kustomize
 #	brew install krew (krew is not support on macosx darwin/arm64)
 	brew install txn2/tap/kubefwd
+# sourc: https://kind.sigs.k8s.io/
+	go install sigs.k8s.io/kind@v0.24.0
+	brew install fluxcd/tap/flux
 
 get-deployment.zip:
 	wget https://github.com/NASA-AMMOS/aerie/releases/download/v2.18.0/Deployment.zip && \
@@ -33,16 +36,36 @@ aerie-down: ## aerie down
 #------------------------------------------------------------------------------
 # Examples
 #------------------------------------------------------------------------------
-aerie-dev: ## (kubefwd) kubectl apply -f./workspace/examples/aerie-dev
+aerie-dev: ## ubectl apply -f./workspace/examples/aerie-dev
 	@echo && echo "[INFO] Attempting to create namespace k8s:context:[${K8S_CONTEXT}]:namespace:[$@]" && \
 	make kubectl-use-context K8S_CONTEXT=${K8S_CONTEXT} && \
 	make kubectl-delete-namespace-$@ || true && \
 	make kubectl-create-namespace-$@ && \
-	kubectl apply -f./workspace/examples/$@/postgres-data-persistentvolumeclaim.yaml && \
-	kubectl apply -f./workspace/examples/$@/postgres-deployment.yaml && \
-	kubectl apply -f./workspace/examples/$@/postgres-service.yaml && \
+	kubectl apply -f ./workspace/examples/$@/secrets/ -n $@ && \
+	kubectl apply -f ./deployment/kubernetes/ -n $@ && \
 	echo && echo use: psql -h postgres -U postgres && echo && \
-	sudo kubefwd svc -n $@ -m 5432:5432
+	pkill kubefwd || true
+	pkill kubectl || true
+	sleep 7
+	make aerie-postgres-port-forward &
+
+#	make aerie-db && \
+	sudo kubefwd services -n $@
+	
+aerie-postgres-port-forward:
+	kubectl --context "${K8S_CONTEXT}" --namespace "aerie-dev" port-forward service/postgres 5432:5432 &
+
+# kubectl --context "docker-desktop" --namespace "aerie-dev" port-forward service/hasura 8080:8080 &
+
+# kubectl exec -n aerie-dev --stdin --tty postgres-b5bdd9577-gmwm4 -- /bin/bash 
+#	kubectl get secret dev-env -n aerie-dev
+#	kubectl describe secret dev-env -n aerie-dev
+# kubectl get secret dev-env -n aerie-dev -o yaml
+#	kubectl --context "${K8S_CONTEXT}" --namespace "$@" port-forward service/aerie-ui 1080:80 &
+
+aerie-db:
+	source ./.env && \
+	  cd ./deployment/postgres-init-db && ./init-aerie.sh
 
 grafana-example-1: ## (kubefwd) kubectl apply -k ./workspace/examples/grafana-example-1/ -n grafana-example-1
 	@echo source https://grafana.com/docs/grafana/latest/setup-grafana/installation/kubernetes/
@@ -94,11 +117,35 @@ postgres-example-1: ## postgres-example-1
 	echo && echo "use: psql -h postgres -U postgres (because kubefwd was used)" && echo
 	sudo kubefwd svc -n $@ -m 5432:5432
 
-postgres-secret:
-	kubectl delete namespace postgresql
-	kubectl create namespace postgresql
-	kubectl create secret generic postgresql-secret --namespace postgresql --from-literal=POSTGRES_DB=postgres --from-literal=POSTGRES_USER=postgres --from-literal=POSTGRES_PASSWORD=pass --dry-run=client -o yaml > ./workspace/postgres/postgresql-secret.yml
-	kubectl get secrets -n postgresql
+aerie-dev-postgres-secrets:
+	kubectl create namespace aerie-dev || true
+	kubectl create secret generic postgres-secret \
+		--namespace aerie-dev \
+		--from-literal=POSTGRES_PASSWORD=pass \
+		--dry-run=client \
+		-o yaml > ./workspace/examples/aerie-dev/secrets/postgres-secret.yml
+
+secrets-example-1:
+	@echo && echo source: https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-secret
+	@make kubectl-use-context K8S_CONTEXT=${K8S_CONTEXT} && \
+	echo && echo "[INFO] Attempting to create namespace k8s:context:[${K8S_CONTEXT}]:namespace:[$@]" && \
+	make kubectl-delete-namespace-$@ || true && \
+	make kubectl-create-namespace-$@ && \
+	kubectl apply -f ./workspace/examples/$@ -n $@
+	kubectl get secret test-secret -n $@
+	kubectl describe secret test-secret -n $@
+	make kubectl-delete-namespace-$@ || true
+
+secrets-example-2:
+	@echo && echo source: https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
+	@make kubectl-use-context K8S_CONTEXT=${K8S_CONTEXT} && \
+	echo && echo "[INFO] Attempting to create namespace k8s:context:[${K8S_CONTEXT}]:namespace:[$@]" && \
+	make kubectl-delete-namespace-$@ || true && \
+	make kubectl-create-namespace-$@ && \
+	kubectl apply -f ./workspace/examples/secrets-example-1/secret-pod.yaml -n $@
+	kubectl get pod secret-test-pod -n $@
+	kubectl describe secret test-secret -n $@
+	make kubectl-delete-namespace-$@ || true
 
 #------------------------------------------------------------------------------
 # kubectl targets
